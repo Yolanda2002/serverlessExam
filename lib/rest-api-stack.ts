@@ -150,18 +150,21 @@ export class RestAPIStack extends cdk.Stack {
       },
     });
 
+    //dev/movies
     const moviesEndpoint = api.root.addResource("movies");
     moviesEndpoint.addMethod(
       "GET",
       new apig.LambdaIntegration(getAllMoviesFn, { proxy: true })
     );
 
+    // dev/cast?movieId={1234}
     const movieCastEndpoint = moviesEndpoint.addResource("cast");
     movieCastEndpoint.addMethod(
       "GET",
       new apig.LambdaIntegration(getMovieCastMembersFn, { proxy: true })
     );
 
+    //dev/movies/{movieId}
     const movieEndpoint = moviesEndpoint.addResource("{movieId}");
     movieEndpoint.addMethod(
       "GET",

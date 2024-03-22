@@ -195,6 +195,7 @@ export class RestAPIStack extends cdk.Stack {
 
 
     //dev/crew/{role}/movies/{movieId}
+    //dev/crew/{role}/movies/{movieId}?name=subString
     const crewResource = api.root.addResource("crew");
     const roleResource = crewResource.addResource("{role}");
     const moviesSubResource = roleResource.addResource("movies");

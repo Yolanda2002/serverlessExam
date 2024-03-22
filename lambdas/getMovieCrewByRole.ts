@@ -8,8 +8,9 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
   const ddbDocClient = createDDbDocClient();
   const role = event.pathParameters?.role;
   const movieId = event.pathParameters?.movieId ? parseInt(event.pathParameters.movieId) : undefined;
+  const nameSubString = event.queryStringParameters?.name;
 
-  console.log(`Fetching crew member for role ${role} and movieId ${movieId}`);
+  console.log(`Fetching crew member for role ${role} and movieId ${movieId} with name containing ${nameSubString}`);
 
   if (!role || !movieId) {
     console.error("Missing or invalid parameters");
@@ -39,7 +40,20 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
       };
     }
 
-    const crewMembers = commandOutput.Items as MovieCrewRole[];
+    //add substring searching
+    let crewMembers = commandOutput.Items as MovieCrewRole[];
+
+    // filter the results by name substring
+    if (nameSubString) {
+      crewMembers = crewMembers.filter(crew => crew.names.includes(nameSubString));
+      if (crewMembers.length === 0) {
+        return {
+          statusCode: 404,
+          body: JSON.stringify({ message: "No crew member names contain the provided substring" }),
+        };
+      }
+    }
+
     const names = crewMembers.map(crew => crew.names).join(", ");
 
     return {

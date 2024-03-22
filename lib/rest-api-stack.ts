@@ -40,7 +40,7 @@ export class RestAPIStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       tableName: "MovieAwards",
     });
- 
+
     const movieCrewTable = new dynamodb.Table(this, "MovieCrewTable", {
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       partitionKey: { name: "movieId", type: dynamodb.AttributeType.NUMBER },
@@ -115,6 +115,23 @@ export class RestAPIStack extends cdk.Stack {
       }
     );
 
+    //added function here:
+    const getMovieCrewByRoleFn = new lambdanode.NodejsFunction(
+      this,
+      "GetMovieCrewByRoleFn",
+      {
+        architecture: lambda.Architecture.ARM_64,
+        runtime: lambda.Runtime.NODEJS_16_X,
+        entry: `${__dirname}/../lambdas/getMovieCrewByRole.ts`,
+        timeout: cdk.Duration.seconds(10),
+        memorySize: 128,
+        environment: {
+          TABLE_NAME: movieCrewTable.tableName,
+          REGION: "eu-west-1",
+        },
+      }
+    );
+
     new custom.AwsCustomResource(this, "moviesddbInitData", {
       onCreate: {
         service: "DynamoDB",
@@ -175,13 +192,25 @@ export class RestAPIStack extends cdk.Stack {
       "DELETE",
       new apig.LambdaIntegration(deleteMovieByIdFn, { proxy: true })
     );
-    
+
+
+    //dev/crew/{role}/movies/{movieId}
+    const crewResource = api.root.addResource("crew");
+    const roleResource = crewResource.addResource("{role}");
+    const moviesSubResource = roleResource.addResource("movies");
+    const crewMovieIdResource = moviesSubResource.addResource("{movieId}");
+
+    crewMovieIdResource.addMethod(
+      "GET", 
+      new apig.LambdaIntegration(getMovieCrewByRoleFn)
+      );
+
     // Permissions;
     moviesTable.grantReadData(getMovieByIdFn);
     moviesTable.grantReadData(getAllMoviesFn);
-     moviesTable.grantReadWriteData(deleteMovieByIdFn)
+    moviesTable.grantReadWriteData(deleteMovieByIdFn)
     movieCastsTable.grantReadData(getMovieCastMembersFn);
     movieCastsTable.grantReadData(getMovieByIdFn)
-
+    movieCrewTable.grantReadData(getMovieCrewByRoleFn);
   }
 }
